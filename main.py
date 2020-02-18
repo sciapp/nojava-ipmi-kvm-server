@@ -13,15 +13,19 @@ from basehandler import BaseHandler, BaseWSHandler
 
 WEBAPP_PORT = int(os.environ["WEBAPP_PORT"])
 WEBAPP_BASE = os.environ['WEBAPP_BASE']
+VNC_PORT_START = int(os.environ.get('VNC_PORT_START', 8800))
+VNC_PORT_END = int(os.environ.get('VNC_PORT_END', 8900))
+external_vnc_dns = os.environ.get('EXTERNAL_VNC_DNS', 'localhost')
 
 config.read_config(DEFAULT_CONFIG_FILEPATH)
+used_ports = []
 
 class MainHandler(BaseHandler):
     @authenticated
     def get(self):
         self.render(
             "index.tpl",
-            title="Hello",
+            title="Remote KVM via WebVNC",
             user=self.get_current_user(),
             servers=config.get_servers(),
             base_uri=WEBAPP_BASE,
@@ -30,11 +34,11 @@ class MainHandler(BaseHandler):
 
 class KVMHandler(BaseWSHandler):
     _instance_counter = 0
-    _current_user = None
-    _current_session = None
 
     def open(self):
         print("WebSocket opened")
+        self._current_session = None
+        self._vnc_port = 0
         self._current_user = self.get_current_user()
 
     def on_message(self, msg):
@@ -73,6 +77,21 @@ class KVMHandler(BaseWSHandler):
                         'refresh': True
                     })
                 host_config = config[server]
+
+                vnc_port = 1;
+                for p in range(VNC_PORT_START, VNC_PORT_END):
+                    if p not in used_ports:
+                        self._vnc_port = p
+                        vnc_port = p
+                        used_ports.append(p)
+                        break
+                else:
+                    return self.write_message({
+                        'action': 'notice',
+                        'message': 'No unused port available. Please notify admins.',
+                        'refresh': True
+                    })
+
                 self._current_session = start_kvm_container(
                     host_config.full_hostname,
                     host_config.login_user,
@@ -84,6 +103,8 @@ class KVMHandler(BaseWSHandler):
                     host_config.password_login_attribute_name,
                     host_config.java_version,
                     host_config.session_cookie_key,
+                    external_vnc_dns,
+                    self._vnc_port,
                 )
                 return self.write_message({
                     'action': 'connected',
@@ -99,6 +120,7 @@ class KVMHandler(BaseWSHandler):
     def on_close(self):
         print("WS closed")
         if self._current_session is not None:
+            used_ports.remove(self._vnc_port)
             self._current_session.kill_process()
 
 def make_app():
