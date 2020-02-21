@@ -1,27 +1,30 @@
 import os
 import json
+import logging
 
 from tornado.web import authenticated
 from tornado import web, ioloop
 
-from nojava_ipmi_kvm.kvm import start_kvm_container
+from nojava_ipmi_kvm.kvm import start_kvm_container, WebserverNotReachableError, DockerNotInstalledError, DockerNotCallableError, DockerPortNotReadableError, DockerTerminatedError
 from nojava_ipmi_kvm.config import config, DEFAULT_CONFIG_FILEPATH
 from nojava_ipmi_kvm import utils
 
 from login_handler import IFFLoginOAuth2Handler
-from basehandler import BaseHandler, BaseWSHandler
+from basehandler import BaseHandler, BaseWSHandler, authorized
 
 WEBAPP_PORT = int(os.environ["WEBAPP_PORT"])
 WEBAPP_BASE = os.environ['WEBAPP_BASE']
 VNC_PORT_START = int(os.environ.get('VNC_PORT_START', 8800))
 VNC_PORT_END = int(os.environ.get('VNC_PORT_END', 8900))
 external_vnc_dns = os.environ.get('EXTERNAL_VNC_DNS', 'localhost')
+CONFIG_PATH = os.environ.get('KVM_CONFIG_PATH', DEFAULT_CONFIG_FILEPATH)
 
-config.read_config(DEFAULT_CONFIG_FILEPATH)
+config.read_config(CONFIG_PATH)
 used_ports = []
 
 class MainHandler(BaseHandler):
     @authenticated
+    @authorized
     def get(self):
         self.render(
             "index.tpl",
@@ -36,19 +39,19 @@ class KVMHandler(BaseWSHandler):
     _instance_counter = 0
 
     def open(self):
-        print("WebSocket opened")
         self._current_session = None
         self._vnc_port = 0
         self._current_user = self.get_current_user()
+        self._connecting = False
+        self._is_closed = False
 
-    def on_message(self, msg):
-        print("WS said: " + msg)
+        if self._current_user is None or not self._current_user['is_admin']:
+            return self.close(code=401, reason="Unauthorized")
 
-        if self._current_user is None:
-            return self.write_message({
-                'action': 'login',
-                'url': '/auth/ifflogin'
-            })
+        logging.info("Websocket opened by %s", self._current_user['name'])
+
+    async def on_message(self, msg):
+        logging.info("Websocket from %s said %s", self._current_user['name'], msg)
 
         try:
             msg = json.loads(msg)
@@ -60,15 +63,16 @@ class KVMHandler(BaseWSHandler):
 
         if 'action' in msg:
             if msg['action'] == 'connect':
-                if self._current_session is not None:
+                if self._connecting:
                     return self.write_message({
                         'action': 'notice',
                         'message': 'Already connected to a kvm!'
                     })
+                self._connecting = True
 
                 server = msg['server']
                 password = msg['password']
-                print('Connecting to ' + server)
+                logging.info('%s wants to connect to %s', self._current_user['name'], server)
 
                 if server not in config.get_servers():
                     return self.write_message({
@@ -92,20 +96,44 @@ class KVMHandler(BaseWSHandler):
                         'refresh': True
                     })
 
-                self._current_session = start_kvm_container(
-                    host_config.full_hostname,
-                    host_config.login_user,
-                    password,
-                    host_config.login_endpoint,
-                    host_config.download_endpoint,
-                    host_config.allow_insecure_ssl,
-                    host_config.user_login_attribute_name,
-                    host_config.password_login_attribute_name,
-                    host_config.java_version,
-                    host_config.session_cookie_key,
-                    external_vnc_dns,
-                    self._vnc_port,
-                )
+                def send_log_message(msg, *args, **kwargs):
+                    if self._is_closed:
+                        return
+                    self.write_message({
+                        'action': 'log',
+                        'message': msg if len(args)  == 0 else msg % args
+                    })
+
+                try:
+                    self._current_session = await start_kvm_container(
+                        host_config.full_hostname,
+                        host_config.login_user,
+                        password,
+                        host_config.login_endpoint,
+                        host_config.download_endpoint,
+                        host_config.allow_insecure_ssl,
+                        host_config.user_login_attribute_name,
+                        host_config.password_login_attribute_name,
+                        host_config.java_version,
+                        host_config.session_cookie_key,
+                        external_vnc_dns,
+                        self._vnc_port,
+                        send_log_message,
+                    )
+                except (
+                    WebserverNotReachableError,
+                    DockerNotInstalledError,
+                    DockerNotCallableError,
+                    IOError,
+                    DockerTerminatedError,
+                    DockerPortNotReadableError
+                ) as ex:
+                    logging.exception("Could not start KVM container")
+                    return self.write_message({
+                        'action': 'error',
+                        'message': str(ex)
+                    })
+
                 return self.write_message({
                     'action': 'connected',
                     'url': self._current_session.url
@@ -114,11 +142,13 @@ class KVMHandler(BaseWSHandler):
         self.write_message({
             'action': 'notice',
             'message': 'Invalid msg received',
-            'source': msg
+            'source': msg,
+            'user': self.get_current_user()
         })
 
     def on_close(self):
-        print("WS closed")
+        logging.info("WS from %s closed", None if self._current_user is None else self._current_user['name'])
+        self._is_closed = True
         if self._current_session is not None:
             used_ports.remove(self._vnc_port)
             self._current_session.kill_process()

@@ -1,23 +1,84 @@
 <html>
  <head>
   <title>{{ title }}</title>
+  <style>
+   body {
+    font-family: Helvetica, sans-serif;
+    color: #222222;
+    #margin: 25px;
+    max-width: 1000px;
+    margin: auto;
+   }
+
+   .time {
+    font-style: oblique;
+   }
+
+    label {
+     display: inline-block;
+     min-width: 7em;
+    }
+
+    input, select {
+     display: inline-block;
+     width: 20em;
+    }
+
+    .submit-button {
+     min-width: 12em;
+    }
+
+    .right-button {
+     margin-left: 3em;
+     min-width: 12em;
+     #float: right;
+    }
+
+   .error-log {
+    color: #cc2222;
+   }
+
+   .kvm-iframe {
+    position:fixed;
+    top:0;
+    left:0;
+    bottom:0;
+    right:0;
+    width:100%;
+    height:100%;
+    border:none;
+    margin:0;
+    padding:0;
+    overflow:hidden;
+    z-index:999999;
+   }
+  </style>
  </head>
  <body>
   <div id="container">
-   <h4>Hello {{ user['name'] }} ({{ user['email'] }}) {% if user['is_admin'] %}(admin){% end %}</h4>
+   <h4>Hello {{ user['name'] }} ({{ user['email'] }})</h4>
 
    <form onsubmit="start_kvm(); return false;">
-    Server Name: <select id="kvm-server">
+    <label for="kvm-server">Server Name: </label>
+    <select id="kvm-server">
      {% for server in servers %}
       <option value="{{ server }}">{{ server }}</option>
      {% end %}
     </select>
-    Password: <input type="password" id="kvm-password" />
-    <button type="submit">
+    <br />
+    <label for="kvm-password">Password: </label>
+    <input type="password" id="kvm-password" />
+    <br />
+    <button type="submit" class="submit-button">
      Connect!
     </button>
-   </div>
-  </form>
+    <button onclick="deleteAllCookies(); document.location='https://ifflogin.fz-juelich.de/'" class="right-button">Logout.</button>
+   </form>
+  </div>
+  <div id="logs">
+   <ul id="logsul">
+   </ul>
+  </div>
 
   <script>
    var timerId = -1;
@@ -37,11 +98,20 @@
      }
     } else if (data.action && data.action == 'connected') {
      clearInterval(timerId);
+
+     // delete logs container
+     var element = document.getElementById('logs');
+     element.parentNode.removeChild(element);
+
      document.title = 'Connected to ' + host_name;
      document.getElementById('container').innerHTML =
-     '<iframe src="' + data.url + '" style="position:fixed; top:0; left:0; bottom:0; right:0; width:100%; height:100%; border:none; margin:0; padding:0; overflow:hidden; z-index:999999;">' +
+     '<iframe src="' + data.url + '" class="kvm-iframe">' +
      'Your browser does not support iframes...' +
      '</iframe>';
+    } else if (data.action && (data.action == 'log' || data.action == 'error')) {
+     logs = document.getElementById('logsul');
+     elementclass = data.action == 'log' ? '' : 'class="error-log"';
+     logs.innerHTML = logs.innerHTML + '<li><span class="time">' + (new Date()).toLocaleString('de-DE') + ': </span><span ' + elementclass + '>' + data.message + '</span></li>';
     }
    };
 
@@ -59,6 +129,17 @@
      'server':   host_name,
      'password': document.getElementById('kvm-password').value
     }));
+   }
+
+   function deleteAllCookies() {
+    var cookies = document.cookie.split(";");
+
+    for (var i = 0; i < cookies.length; i++) {
+     var cookie = cookies[i];
+     var eqPos = cookie.indexOf("=");
+     var name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+     document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    }
    }
   </script>
  </body>

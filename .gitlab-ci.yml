@@ -1,0 +1,13 @@
+build-image:
+  image: docker:stable
+  rules:
+  - if: '$CI_COMMIT_REF_NAME == "master"' #' && $CI_PROJECT_NAMESPACE == "Scientific-IT-Systems"'
+    when: always
+  variables:
+    DOCKER_DRIVER: overlay2
+  services:
+    - docker:stable-dind
+  script:
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+    - docker build -t $CI_REGISTRY_IMAGE/$CI_JOB_NAME .
+    - docker push $CI_REGISTRY_IMAGE/$CI_JOB_NAME

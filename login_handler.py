@@ -22,6 +22,8 @@ class IFFLoginOAuth2Handler(BaseHandler, IFFLoginOAuth2Mixin): #BaseRequestHandl
             uid = user_data["username"]
             self.set_secure_cookie("user", email)
             self.set_secure_cookie("user_name", uid)
+
+            # Connect to ldap to check access of group
             try:
                 server = ldap3.Server(
                     'ldaps://ldap.iff.kfa-juelich.de', use_ssl=True, get_info=ldap3.ALL)
@@ -32,15 +34,16 @@ class IFFLoginOAuth2Handler(BaseHandler, IFFLoginOAuth2Mixin): #BaseRequestHandl
                 password = os.environ['LDAP_PASSWORD']
                 connection = ldap3.Connection(
                     [server, fallback_server], user=user_dn, password=password, auto_bind=True)
-                reader = ldap3.Reader(connection, ldap3.ObjectDef('posixaccount', connection), base_dn,
+                reader = ldap3.Reader(connection, ldap3.ObjectDef('inetUser', connection), base_dn,
                                       '(&(objectClass=inetOrgPerson)(mail={email})(uid={uid}))'.format(email=email, uid=uid))
                 user_infos = reader.search()
                 self.set_secure_cookie("is_admin", "off")
                 if user_infos:
                     for user in user_infos:
-                        if 'gidNumber' in user and user['gidNumber'] == 60400:
-                            self.set_secure_cookie("is_admin", "on")
-                            break
+                        if 'memberOf' in user:
+                            if 'cn=cluster-kvm,cn=groups,cn=accounts,dc=iff,dc=kfa-juelich,dc=de' in user['memberOf']:
+                                self.set_secure_cookie("is_admin", "on")
+                                break
                 else:
                     print("Error")  # TODO Error handling
             except Exception as e:

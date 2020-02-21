@@ -2,7 +2,6 @@
 ifflogin_tornado - A demo for using iffLogin in a tornado app
 """
 import os
-import secrets
 import json
 from typing import Dict, Any
 import tornado
