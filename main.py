@@ -18,6 +18,7 @@ VNC_PORT_START = int(os.environ.get('VNC_PORT_START', 8800))
 VNC_PORT_END = int(os.environ.get('VNC_PORT_END', 8900))
 external_vnc_dns = os.environ.get('EXTERNAL_VNC_DNS', 'localhost')
 CONFIG_PATH = os.environ.get('KVM_CONFIG_PATH', DEFAULT_CONFIG_FILEPATH)
+IFRAME_PATH_FORMAT = os.environ.get('IFRAME_PATH_FORMAT', '{url}')
 
 config.read_config(CONFIG_PATH)
 used_ports = []
@@ -105,7 +106,7 @@ class KVMHandler(BaseWSHandler):
                     })
 
                 try:
-                    self._current_session = await start_kvm_container(
+                    sess = self._current_session = await start_kvm_container(
                         host_config.full_hostname,
                         host_config.login_user,
                         password,
@@ -136,7 +137,11 @@ class KVMHandler(BaseWSHandler):
 
                 return self.write_message({
                     'action': 'connected',
-                    'url': self._current_session.url
+                    'url': IFRAME_PATH_FORMAT.format(
+                        url = sess.url,
+                        external_vnc_dns = sess.external_vnc_dns,
+                        port = sess.vnc_web_port,
+                        password = sess.vnc_password)
                 })
 
         self.write_message({
