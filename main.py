@@ -73,7 +73,8 @@ class KVMHandler(BaseWSHandler):
 
                 server = msg['server']
                 password = msg['password']
-                logging.info('%s wants to connect to %s', self._current_user['name'], server)
+                resolution = msg['resolution']
+                logging.info('%s wants to connect to %s with res %s', self._current_user['name'], server, resolution)
 
                 if server not in config.get_servers():
                     return self.write_message({
@@ -120,6 +121,7 @@ class KVMHandler(BaseWSHandler):
                         external_vnc_dns,
                         self._vnc_port,
                         send_log_message,
+                        resolution,
                     )
                 except (
                     WebserverNotReachableError,

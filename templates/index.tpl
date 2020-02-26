@@ -66,9 +66,20 @@
      {% end %}
     </select>
     <br />
+
     <label for="kvm-password">Password: </label>
     <input type="password" id="kvm-password" />
     <br />
+
+    <label for="kvm-resolution">Resolution: </label>
+    <select id="kvm-resolution">
+      <option value="800x600">800 * 600</option>
+      <option value="1024x768">1024 * 768</option>
+      <option value="1280x960" selected="selected">1280 * 960</option>
+      <option value="1600x1200">1600 * 1200</option>
+    </select>
+    <br />
+
     <button type="submit" class="submit-button">
      Connect!
     </button>
@@ -127,7 +138,8 @@
     ws.send(JSON.stringify({
      'action':   'connect',
      'server':   host_name,
-     'password': document.getElementById('kvm-password').value
+     'password': document.getElementById('kvm-password').value,
+     'resolution': document.getElementById('kvm-resolution').value
     }));
    }
 
