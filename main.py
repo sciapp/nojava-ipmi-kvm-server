@@ -170,6 +170,7 @@ def make_app():
         "login_url": "/oauth/login",
         "xsrf_cookies": True,
         "default_handler_class": MainHandler,
+        "websocket_ping_interval": 10,
     }
     return web.Application(
         [

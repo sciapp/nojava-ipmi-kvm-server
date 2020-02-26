@@ -105,7 +105,7 @@
 
      document.title = 'Connected to ' + host_name;
      document.getElementById('container').innerHTML =
-     '<iframe src="' + data.url + '" class="kvm-iframe">' +
+     '<iframe src="' + data.url + '" class="kvm-iframe" allowfullscreen>' +
      'Your browser does not support iframes...' +
      '</iframe>';
     } else if (data.action && (data.action == 'log' || data.action == 'error')) {
