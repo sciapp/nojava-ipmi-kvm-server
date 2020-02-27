@@ -132,6 +132,7 @@ class KVMHandler(BaseWSHandler):
                     DockerPortNotReadableError
                 ) as ex:
                     logging.exception("Could not start KVM container")
+                    used_ports.remove(vnc_port)
                     return self.write_message({
                         'action': 'error',
                         'message': str(ex)
