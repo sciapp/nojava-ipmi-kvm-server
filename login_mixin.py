@@ -11,6 +11,7 @@ import tornado.httputil
 import tornado.httpclient
 import tornado.ioloop
 import tornado.web
+import urllib
 try:
     import certifi
     ca_certs = certifi.where()
@@ -35,22 +36,19 @@ class IFFLoginOAuth2Mixin(tornado.auth.OAuth2Mixin):
         """
         http_client = self.get_auth_http_client()
         # get the access token for this code
-        url = tornado.httputil.url_concat(f"{self.IFFLOGIN_HOST}/oauth/token", {
-            'client_id': self.IFFLOGIN_CLIENT_ID,
-            'client_secret': self.IFFLOGIN_CLIENT_SECRET,
-            'redirect_uri': self.IFFLOGIN_REDIRECT_URI,
-            'grant_type': "authorization_code",
-            'code': code,
-        })
-        request = tornado.httpclient.HTTPRequest(
-            url,
+        response = await http_client.fetch(
+            self._OAUTH_ACCESS_TOKEN_URL,
             method="POST",
-            headers={
-                "Accept": "application/json"
-            },
+            headers={"Accept": "application/json"},
             validate_cert=True,
-            body='',
-            ca_certs=ca_certs)
+            body=urllib.parse.urlencode([
+                ('client_id', self.IFFLOGIN_CLIENT_ID),
+                ('client_secret', self.IFFLOGIN_CLIENT_SECRET),
+                ('redirect_uri', self.IFFLOGIN_REDIRECT_URI),
+                ('grant_type', "authorization_code"),
+                ('code', code)
+            ])
+        )
         # response = await http_client.fetch(
         #     url,
         #     method="POST",
@@ -58,7 +56,6 @@ class IFFLoginOAuth2Mixin(tornado.auth.OAuth2Mixin):
         #     validate_cert=True,
         #     body=''
         # )
-        response = await http_client.fetch(request)
         response_data = json.loads(response.body.decode('utf8', 'replace'))
         access_token = response_data['access_token']
         # get the user information for this access token
