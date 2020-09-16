@@ -11,8 +11,11 @@
  <body>
   <div id="container">
    <h4>Hello {{ user['name'] }} ({{ user['email'] }})</h4>
-   <h5>You are not authorized to use this service. Please contact pgiadmin if you think that this is a mistake.</h5>
-   <button onclick="deleteAllCookies(); document.location='https://ifflogin.fz-juelich.de/'">Logout.</button>
+   <h5>You are not authorized to use this service. Please contact the responsible admin if you think that this is a mistake.</h5>
+   {% import os %}
+   {% if 'OAUTH_HOST' in os.environ %}
+   <button onclick="deleteAllCookies(); document.location='{{ os.environ['OAUTH_HOST'] }}'">Logout.</button>
+   {% end %}
   </div>
   <script>
    function deleteAllCookies() {

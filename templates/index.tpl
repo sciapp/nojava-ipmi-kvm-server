@@ -83,7 +83,10 @@
     <button type="submit" class="submit-button">
      Connect!
     </button>
-    <button onclick="deleteAllCookies(); document.location='https://ifflogin.fz-juelich.de/'" class="right-button">Logout.</button>
+    {% import os %}
+    {% if 'OAUTH_HOST' in os.environ %}
+    <button onclick="deleteAllCookies(); document.location='{{ os.environ['OAUTH_HOST'] }}'" class="right-button">Logout.</button>
+    {% end %}
    </form>
   </div>
   <div id="logs">
