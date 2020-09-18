@@ -1,13 +1,36 @@
-build-image:
-  image: docker:stable
-  rules:
-  - if: '$CI_COMMIT_REF_NAME == "master"' #' && $CI_PROJECT_NAMESPACE == "Scientific-IT-Systems"'
-    when: always
+stages:
+- deploy
+
+deploy-to-github:
+  stage: deploy
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/deploy
+  variables:
+    GIT_STRATEGY: none
+  only:
+  - master@Scientific-IT-Systems/administration/nojava-ipmi-kvm-server
+  - develop@Scientific-IT-Systems/administration/nojava-ipmi-kvm-server
+  - tags@Scientific-IT-Systems/administration/nojava-ipmi-kvm-server
+  script:
+  - mkdir --mode=700 ~/.ssh/
+  - (umask 0377 && echo "${GITHUB_DEPLOY_KEY}" > ~/.ssh/id_rsa
+                && echo "github.com ${GITHUB_HOST_KEY}" >> ~/.ssh/known_hosts)
+  - git clone --mirror "${CI_REPOSITORY_URL}" "${CI_PROJECT_NAME}_mirror"
+  - cd "${CI_PROJECT_NAME}_mirror";
+    git push --mirror "git@github.com:sciapp/${CI_PROJECT_NAME}.git";
+    cd ..
+
+deploy-to-dockerhub:
+  image: docker:latest
+  stage: deploy
   variables:
     DOCKER_DRIVER: overlay2
   services:
-    - docker:stable-dind
+  - docker:dind
   script:
-    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
-    - docker build -t $CI_REGISTRY_IMAGE/$CI_JOB_NAME .
-    - docker push $CI_REGISTRY_IMAGE/$CI_JOB_NAME
+  - docker login -u "${DOCKERHUB_USER}" -p "${DOCKERHUB_SECRET}"
+  - docker build -t "${DOCKERHUB_NAMESPACE}/${CI_PROJECT_NAME}:${CI_COMMIT_TAG}" .
+  - docker push "${DOCKERHUB_NAMESPACE}/${CI_PROJECT_NAME}:${CI_COMMIT_TAG}"
+  - docker tag "${DOCKERHUB_NAMESPACE}/${CI_PROJECT_NAME}:${CI_COMMIT_TAG}" "${DOCKERHUB_NAMESPACE}/${CI_PROJECT_NAME}:latest"
+  - docker push "${DOCKERHUB_NAMESPACE}/${CI_PROJECT_NAME}:latest"
+  only:
+  - tags@Scientific-IT-Systems/administration/nojava-ipmi-kvm-server
