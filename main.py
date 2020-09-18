@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+__version__ = "0.1.0"
+__author__ = "M. Heuwes <m.heuwes@fz-juelich.de>"
+
 import os
 import json
 import logging
@@ -25,9 +28,9 @@ from basehandler import BaseHandler, BaseWSHandler, authorized
 
 WEBAPP_PORT = int(os.environ["WEBAPP_PORT"])
 WEBAPP_BASE = os.environ["WEBAPP_BASE"]
-VNC_PORT_START = int(os.environ.get("VNC_PORT_START", 8800))
-VNC_PORT_END = int(os.environ.get("VNC_PORT_END", 8900))
-external_vnc_dns = os.environ.get("EXTERNAL_VNC_DNS", "localhost")
+WEB_PORT_START = int(os.environ.get("WEB_PORT_START", 8800))
+WEB_PORT_END = int(os.environ.get("WEB_PORT_END", 8900))
+external_web_dns = os.environ.get("EXTERNAL_WEB_DNS", "localhost")
 CONFIG_PATH = os.environ.get("KVM_CONFIG_PATH", DEFAULT_CONFIG_FILEPATH)
 JAVA_IFRAME_PATH_FORMAT = os.environ.get("JAVA_IFRAME_PATH_FORMAT", "{url}")
 HTML5_IFRAME_PATH_FORMAT = os.environ.get("HTML5_IFRAME_PATH_FORMAT", "{url}")
@@ -47,7 +50,7 @@ class MainHandler(BaseHandler):
     def get(self):
         self.render(
             "index.tpl",
-            title="Remote KVM via WebVNC",
+            title="Remote KVM",
             user=self.get_current_user(),
             servers=config.get_servers(),
             base_uri=WEBAPP_BASE,
@@ -96,7 +99,7 @@ class KVMHandler(BaseWSHandler):
                 host_config = config[server]
 
                 web_port = 1
-                for p in range(VNC_PORT_START, VNC_PORT_END):
+                for p in range(WEB_PORT_START, WEB_PORT_END):
                     if p not in used_ports:
                         self._web_port = p
                         web_port = p
@@ -133,14 +136,14 @@ class KVMHandler(BaseWSHandler):
                     sess = self._current_session = await start_kvm_container(
                         host_config=host_config,
                         login_password=password,
-                        external_vnc_dns=external_vnc_dns,
+                        external_vnc_dns=external_web_dns,
                         docker_port=self._web_port,
                         additional_logging=send_log_message,
                         selected_resolution=resolution,
                         authorization_key=authorization_key,
                         authorization_value=authorization_value,
                         subdir=HTML5_SUBDIR_FORMAT.format(
-                            external_vnc_dns=external_vnc_dns, port=self._web_port, hostname=host_config.full_hostname
+                            external_web_dns=external_web_dns, port=self._web_port, hostname=host_config.full_hostname
                         ),
                     )
                 except (
@@ -161,7 +164,7 @@ class KVMHandler(BaseWSHandler):
                             "action": "connected",
                             "url": HTML5_IFRAME_PATH_FORMAT.format(
                                 url=sess.url,
-                                external_vnc_dns=sess.external_vnc_dns,
+                                external_web_dns=external_web_dns,
                                 port=sess.web_port,
                                 subdir=sess.subdir,
                                 authorization_key=sess.authorization_key,
@@ -178,7 +181,7 @@ class KVMHandler(BaseWSHandler):
                             "action": "connected",
                             "url": JAVA_IFRAME_PATH_FORMAT.format(
                                 url=sess.url,
-                                external_vnc_dns=sess.external_vnc_dns,
+                                external_web_dns=external_web_dns,
                                 port=sess.web_port,
                                 password=sess.vnc_password,
                             ),
