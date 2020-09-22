@@ -1,4 +1,6 @@
 # NoJava-IPMI-KVM-Server
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fsciapp%2Fnojava-ipmi-kvm-server.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fsciapp%2Fnojava-ipmi-kvm-server?ref=badge_shield)
+
 
 ## Introduction
 
@@ -92,3 +94,7 @@ Some examples:
 - `{url}`: No special network configuration, `EXTERNAL_WEB_DNS` is set to the external address of the docker host
 - `https://outside-address/{port}/vnc.html?host={outside-address}&autoconnect=true&password={password}&path={port}/websockify`: Java Example using a reverse proxy proxying WebVNC Ports
 - `https://{external_web_dns}/{subdir}{html5_endpoint}`: HTML5 Example using a reverse proxy
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fsciapp%2Fnojava-ipmi-kvm-server.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fsciapp%2Fnojava-ipmi-kvm-server?ref=badge_large)
