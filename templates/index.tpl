@@ -60,12 +60,12 @@
 
    <form onsubmit="start_kvm(); return false;">
     <label for="kvm-server">Server Name: </label>
-    <datalist id="kvm-server">
+    <datalist id="kvm-server-list">
      {% for server in servers %}
       <option value="{{ server }}">{{ server }}</option>
      {% end %}
     </datalist>
-    <input autocomplete="on" list="kvm-server" placeholder="select server"/>
+    <input id="kvm-server" autocomplete="on" list="kvm-server-list" placeholder="select server"/>
     <br />
 
     <label for="kvm-password">Password: </label>
