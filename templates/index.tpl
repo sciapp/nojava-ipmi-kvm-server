@@ -58,22 +58,23 @@
   <div id="container">
    <h4>Hello {{ user['name'] }} ({{ user['email'] }})</h4>
 
-   <form onsubmit="start_kvm(); return false;">
+   <form>
+    {% module xsrf_form_html() %}
     <label for="kvm-server">Server Name: </label>
     <datalist id="kvm-server-list">
      {% for server in servers %}
       <option value="{{ server }}">{{ server }}</option>
      {% end %}
     </datalist>
-    <input id="kvm-server" autocomplete="on" list="kvm-server-list" placeholder="select server"/>
+    <input id="kvm-server" autocomplete="on" list="kvm-server-list" placeholder="select server" name="server_name" />
     <br />
 
     <label for="kvm-password">Password: </label>
-    <input type="password" id="kvm-password" />
+    <input type="password" id="kvm-password" name="password"/>
     <br />
 
     <label for="kvm-resolution">Resolution: </label>
-    <select id="kvm-resolution">
+    <select id="kvm-resolution" name="resolution">
       <option value="800x600">800 * 600</option>
       <option value="1024x768">1024 * 768</option>
       <option value="1280x960" selected="selected">1280 * 960</option>
@@ -81,8 +82,11 @@
     </select>
     <br />
 
-    <button type="submit" class="submit-button">
+    <button type="submit" class="submit-button" onclick="javascript:start_kvm();return false;">
      Connect!
+    </button>
+    <button type="submit" class="submit-button" formmethod="post" formtarget="_blank">
+     Connect in new tab!
     </button>
     {% import os %}
     {% if 'OAUTH_HOST' in os.environ %}
@@ -102,6 +106,9 @@
    var ws = new WebSocket("{{ websocket_uri }}/kvm");
    ws.onopen = function() {
     console.log('Websocket open!');
+
+    {% block ws_onopen %}
+    {% end %}
    };
    ws.onmessage = function (evt) {
     console.log(evt.data);
@@ -112,7 +119,8 @@
       window.location = '/';
      }
     } else if (data.action && data.action == 'connected') {
-     clearInterval(timerId);
+     timerId !== -1 && clearInterval(timerId);
+     timerId = -1;
 
      // delete logs container
      var element = document.getElementById('logs');
@@ -127,24 +135,34 @@
      logs = document.getElementById('logsul');
      elementclass = data.action == 'log' ? '' : 'class="error-log"';
      logs.innerHTML = logs.innerHTML + '<li><span class="time">' + (new Date()).toLocaleString('de-DE') + ': </span><span ' + elementclass + '>' + data.message + '</span></li>';
+     if (data.action == 'error') {
+      timerId !== -1 && clearInterval(timerId);
+      timerId = -1;
+
+      var text = 'Failed to connect.';
+      document.getElementById('container').innerHTML = '<h1>' + text + '</h1>';
+      document.title = text;
+     }
     }
    };
 
    function start_kvm() {
     host_name = document.getElementById('kvm-server').value.trim();
     var amount = 0;
-    timerId = setInterval(function() {
+    function updateTitle() {
      var text = 'Connecting to ' + host_name + '.'.repeat(amount++);
      document.getElementById('container').innerHTML = '<h1>' + text + '</h1>';
      document.title = text;
      amount = amount % 4;
-    }, 1000);
+    }
+    timerId = setInterval(updateTitle, 1000);
     ws.send(JSON.stringify({
      'action':   'connect',
      'server':   host_name,
      'password': document.getElementById('kvm-password').value,
      'resolution': document.getElementById('kvm-resolution').value
     }));
+    updateTitle();
    }
 
    function deleteAllCookies() {
