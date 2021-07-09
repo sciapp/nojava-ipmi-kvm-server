@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.1.0"
+__version__ = "0.2.1"
 __author__ = "M. Heuwes <m.heuwes@fz-juelich.de>"
 
 import os
