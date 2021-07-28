@@ -22,10 +22,6 @@ deploy-to-github:
 deploy-to-dockerhub:
   image: docker:latest
   stage: deploy
-  variables:
-    DOCKER_DRIVER: overlay2
-  services:
-  - docker:dind
   script:
   - docker login -u "${DOCKERHUB_USER}" -p "${DOCKERHUB_SECRET}"
   - docker build -t "${DOCKERHUB_NAMESPACE}/${CI_PROJECT_NAME}:${CI_COMMIT_TAG}" .
