@@ -1,4 +1,4 @@
 tornado>=6.0.0
-nojava-ipmi-kvm>=0.9.1
+nojava-ipmi-kvm>=0.9.2
 ldap3>=2.4.1
 certifi>=2019.11.28
