@@ -17,6 +17,7 @@ from nojava_ipmi_kvm.kvm import (
 )
 from nojava_ipmi_kvm.config import config, HTML5HostConfig
 from nojava_ipmi_kvm import utils
+from tornado import gen
 
 from basehandler import BaseWSHandler
 
@@ -46,6 +47,7 @@ class KVMHandler(BaseWSHandler):
 
         logging.info("Websocket opened by %s", self._current_user["name"])
 
+    @gen.coroutine
     async def on_message(self, msg):
         logging.info("Websocket from %s said %s", self._current_user["name"], msg)
 
