@@ -17,7 +17,7 @@ from nojava_ipmi_kvm.kvm import (
 )
 from nojava_ipmi_kvm.config import config, HTML5HostConfig
 from nojava_ipmi_kvm import utils
-
+from tornado.websocket import WebSocketError
 from basehandler import BaseWSHandler
 
 WEB_PORT_START = int(os.environ.get("WEB_PORT_START", 8800))
@@ -60,6 +60,7 @@ class KVMHandler(BaseWSHandler):
                     return self.write_message({"action": "notice", "message": "Already connected to a kvm!"})
                 self._connecting = True
 
+                started = False
                 server = msg["server"]
                 password = msg["password"]
                 resolution = msg["resolution"] if "resolution" in msg else None
@@ -119,17 +120,20 @@ class KVMHandler(BaseWSHandler):
                             external_web_dns=external_web_dns, port=self._web_port, hostname=host_config.full_hostname
                         ),
                     )
-                except (
-                    WebserverNotReachableError,
-                    DockerNotInstalledError,
-                    DockerNotCallableError,
-                    IOError,
-                    DockerTerminatedError,
-                    DockerPortNotReadableError,
-                ) as ex:
-                    logging.exception("Could not start KVM container")
-                    used_ports.remove(web_port)
+                    started = True
+                except WebSocketError as ex:
+                    logging.exception("Could not start KVM container: WebSocket closed unexpectedly?")
+                except Exception as ex:
+                    logging.exception("Could not start KVM container: %s" % ex)
                     return self.write_message({"action": "error", "message": str(ex)})
+                finally:
+                    try:
+                        if not started:
+                            used_ports.remove(web_port)
+                            self._current_session.kill_process()
+                    except:
+                        pass
+                    return
 
                 if isinstance(sess, HTML5KvmViewer):
                     return self.write_message(
