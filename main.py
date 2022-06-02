@@ -20,6 +20,8 @@ from kvm_handler import KVMHandler
 WEBAPP_PORT = int(os.environ["WEBAPP_PORT"])
 WEBAPP_BASE = os.environ["WEBAPP_BASE"]
 CONFIG_PATH = os.environ.get("KVM_CONFIG_PATH", DEFAULT_CONFIG_FILEPATH)
+WSPING_INTERVAL = os.environ.get(WSPING_INTERVAL, 5)
+WSPING_TIMEOUT = os.environ.get(WSPING_TIMEOUT, 30)
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 
@@ -67,7 +69,8 @@ def make_app():
         "login_url": "/oauth/login",
         "xsrf_cookies": True,
         "default_handler_class": MainHandler,
-        "websocket_ping_interval": 10,
+        "websocket_ping_interval": WSPING_INTERVAL,
+        "websocket_ping_timeout": WSPING_TIMEOUT,
     }
     return web.Application(
         [web.url(r"/oauth/login", OAuth2LoginHandler), web.url(r"/", MainHandler), web.url(r"/kvm", KVMHandler)],
