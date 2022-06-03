@@ -20,8 +20,8 @@ from kvm_handler import KVMHandler
 WEBAPP_PORT = int(os.environ["WEBAPP_PORT"])
 WEBAPP_BASE = os.environ["WEBAPP_BASE"]
 CONFIG_PATH = os.environ.get("KVM_CONFIG_PATH", DEFAULT_CONFIG_FILEPATH)
-WSPING_INTERVAL = os.environ.get(WSPING_INTERVAL, 5)
-WSPING_TIMEOUT = os.environ.get(WSPING_TIMEOUT, 30)
+WSPING_INTERVAL = os.environ.get("WSPING_INTERVAL", 5)
+WSPING_TIMEOUT = os.environ.get("WSPING_TIMEOUT", 30)
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 
