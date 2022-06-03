@@ -133,7 +133,6 @@ class KVMHandler(BaseWSHandler):
                             self._current_session.kill_process()
                     except:
                         pass
-                    return
 
                 if isinstance(sess, HTML5KvmViewer):
                     return self.write_message(
