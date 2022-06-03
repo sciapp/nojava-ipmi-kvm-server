@@ -123,6 +123,7 @@ class KVMHandler(BaseWSHandler):
                     started = True
                 except WebSocketError as ex:
                     logging.exception("Could not start KVM container: WebSocket closed unexpectedly?")
+                    return
                 except Exception as ex:
                     logging.exception("Could not start KVM container: %s" % ex)
                     return self.write_message({"action": "error", "message": str(ex)})
